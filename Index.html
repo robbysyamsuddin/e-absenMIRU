@@ -1,438 +1,251 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>E-Absen Madrasah</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
-    <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>E-Absen Madrasah</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --indigo: #4f46e5; --indigo-dark: #3730a3; --indigo-light: #e0e7ff;
+      --green: #16a34a; --green-light: #dcfce7;
+      --red: #dc2626; --red-light: #fee2e2;
+      --amber: #b45309; --amber-light: #fef3c7;
+      --bg: #f1f5f9; --card: #ffffff;
+      --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 28px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+      padding: 28px 24px 24px;
+      width: 100%; max-width: 380px;
+    }
+    .header { text-align: center; margin-bottom: 24px; }
+    .logo {
+      width: 60px; height: 60px; background: var(--indigo);
+      border-radius: 18px; display: inline-flex;
+      align-items: center; justify-content: center;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 20px rgba(79,70,229,0.3);
+    }
+    .logo svg { width: 30px; height: 30px; stroke: white; }
+    h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+    .subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
-        :root {
-            --indigo: #4f46e5;
-            --indigo-dark: #3730a3;
-            --indigo-light: #e0e7ff;
-            --green: #16a34a;
-            --green-light: #dcfce7;
-            --red: #dc2626;
-            --red-light: #fee2e2;
-            --amber: #b45309;
-            --amber-light: #fef3c7;
-            --bg: #f1f5f9;
-            --card: #ffffff;
-            --text: #1e293b;
-            --muted: #64748b;
-            --border: #e2e8f0;
-        }
+    #videoWrap {
+      display: none; position: relative;
+      width: 100%; aspect-ratio: 1;
+      border-radius: 20px; overflow: hidden;
+      background: #0f172a; margin-bottom: 16px;
+    }
+    #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #canvas { display: none; }
 
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: var(--bg);
-            min-height: 100dvh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
+    .overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .scan-frame { width: 60%; aspect-ratio: 1; position: relative; }
+    .scan-frame::before, .scan-frame::after,
+    .scan-frame span::before, .scan-frame span::after {
+      content: ''; position: absolute;
+      width: 24px; height: 24px;
+      border-color: rgba(255,255,255,0.9); border-style: solid;
+    }
+    .scan-frame::before  { top:0; left:0;  border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
+    .scan-frame::after   { top:0; right:0; border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
+    .scan-frame span::before { bottom:0; left:0;  border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
+    .scan-frame span::after  { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
+    .scan-line {
+      position: absolute; left:4%; right:4%; height:2px;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.85), transparent);
+      animation: scanAnim 2s ease-in-out infinite;
+    }
+    @keyframes scanAnim {
+      0%,100% { top:8%; } 50% { top:88%; }
+    }
 
-        .card {
-            background: var(--card);
-            border-radius: 28px;
-            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08);
-            padding: 28px 24px 24px;
-            width: 100%;
-            max-width: 380px;
-        }
+    #statusBox {
+      display: none; padding: 14px 16px; border-radius: 14px;
+      font-size: 13px; font-weight: 600; margin-bottom: 16px;
+      line-height: 1.6; white-space: pre-line;
+    }
+    #statusBox.loading { background:var(--indigo-light); color:var(--indigo-dark); }
+    #statusBox.success { background:var(--green-light);  color:var(--green); }
+    #statusBox.error   { background:var(--red-light);    color:var(--red); }
+    #statusBox.warning { background:var(--amber-light);  color:var(--amber); }
 
-        .header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
+    .btn {
+      width: 100%; padding: 14px; border-radius: 16px; border: none;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: transform .15s, background .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background:var(--indigo); color:white; box-shadow:0 6px 18px rgba(79,70,229,0.35); }
+    .btn-primary:hover { background:var(--indigo-dark); }
+    .btn-stop { display:none; margin-top:10px; background:#f1f5f9; color:var(--muted); }
+    .btn-stop:hover { background:#e2e8f0; }
 
-        .logo {
-            width: 60px;
-            height: 60px;
-            background: var(--indigo);
-            border-radius: 18px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 14px;
-            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
-        }
-
-        .logo svg {
-            width: 30px;
-            height: 30px;
-            stroke: white;
-        }
-
-        h1 {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .subtitle {
-            font-size: 13px;
-            color: var(--muted);
-            margin-top: 4px;
-        }
-
-        #videoWrap {
-            display: none;
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1;
-            border-radius: 20px;
-            overflow: hidden;
-            background: #0f172a;
-            margin-bottom: 16px;
-        }
-
-        #video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        #canvas {
-            display: none;
-        }
-
-        .overlay {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        }
-
-        .scan-frame {
-            width: 60%;
-            aspect-ratio: 1;
-            position: relative;
-        }
-
-        .scan-frame::before,
-        .scan-frame::after,
-        .scan-frame span::before,
-        .scan-frame span::after {
-            content: '';
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            border-color: rgba(255, 255, 255, 0.9);
-            border-style: solid;
-        }
-
-        .scan-frame::before {
-            top: 0;
-            left: 0;
-            border-width: 3px 0 0 3px;
-            border-radius: 5px 0 0 0;
-        }
-
-        .scan-frame::after {
-            top: 0;
-            right: 0;
-            border-width: 3px 3px 0 0;
-            border-radius: 0 5px 0 0;
-        }
-
-        .scan-frame span::before {
-            bottom: 0;
-            left: 0;
-            border-width: 0 0 3px 3px;
-            border-radius: 0 0 0 5px;
-        }
-
-        .scan-frame span::after {
-            bottom: 0;
-            right: 0;
-            border-width: 0 3px 3px 0;
-            border-radius: 0 0 5px 0;
-        }
-
-        .scan-line {
-            position: absolute;
-            left: 4%;
-            right: 4%;
-            height: 2px;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.85), transparent);
-            animation: scanAnim 2s ease-in-out infinite;
-        }
-
-        @keyframes scanAnim {
-
-            0%,
-            100% {
-                top: 8%;
-            }
-
-            50% {
-                top: 88%;
-            }
-        }
-
-        #statusBox {
-            display: none;
-            padding: 14px 16px;
-            border-radius: 14px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            line-height: 1.6;
-            white-space: pre-line;
-        }
-
-        #statusBox.loading {
-            background: var(--indigo-light);
-            color: var(--indigo-dark);
-        }
-
-        #statusBox.success {
-            background: var(--green-light);
-            color: var(--green);
-        }
-
-        #statusBox.error {
-            background: var(--red-light);
-            color: var(--red);
-        }
-
-        #statusBox.warning {
-            background: var(--amber-light);
-            color: var(--amber);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 16px;
-            border: none;
-            font-family: inherit;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform .15s, background .15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn:active {
-            transform: scale(0.97);
-        }
-
-        .btn-primary {
-            background: var(--indigo);
-            color: white;
-            box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
-        }
-
-        .btn-primary:hover {
-            background: var(--indigo-dark);
-        }
-
-        .btn-stop {
-            display: none;
-            margin-top: 10px;
-            background: #f1f5f9;
-            color: var(--muted);
-        }
-
-        .btn-stop:hover {
-            background: #e2e8f0;
-        }
-
-        #guide {
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
-            text-align: center;
-        }
-
-        .guide-label {
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            color: #94a3b8;
-            margin-bottom: 8px;
-        }
-
-        .guide-text {
-            font-size: 12px;
-            color: var(--muted);
-            line-height: 1.7;
-        }
-    </style>
+    #guide { margin-top:20px; padding-top:16px; border-top:1px solid var(--border); text-align:center; }
+    .guide-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#94a3b8; margin-bottom:8px; }
+    .guide-text { font-size:12px; color:var(--muted); line-height:1.7; }
+  </style>
 </head>
-
 <body>
-    <div class="card">
-        <div class="header">
-            <div class="logo">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm7-16v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4" />
-                </svg>
-            </div>
-            <h1>E-Absen Madrasah</h1>
-            <p class="subtitle" id="subtitle">Tekan tombol untuk mulai scan</p>
-        </div>
-
-        <div id="videoWrap">
-            <video id="video" playsinline autoplay muted></video>
-            <canvas id="canvas"></canvas>
-            <div class="overlay">
-                <div class="scan-frame"><span></span>
-                    <div class="scan-line"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="statusBox"></div>
-
-        <button class="btn btn-primary" id="btnStart" onclick="startScanner()">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Mulai Scan Kamera
-        </button>
-        <button class="btn btn-stop" id="btnStop" onclick="stopScanner()">✕ &nbsp;Hentikan Kamera</button>
-
-        <div id="guide">
-            <p class="guide-label">Panduan</p>
-            <p class="guide-text">Arahkan kamera ke QR Code kartu guru.<br>Kamera belakang digunakan
-                otomatis.<br>Absensi tersimpan langsung ke Google Sheets.</p>
-        </div>
+<div class="card">
+  <div class="header">
+    <div class="logo">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm7-16v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4"/>
+      </svg>
     </div>
+    <h1>E-Absen Madrasah</h1>
+    <p class="subtitle" id="subtitle">Tekan tombol untuk mulai scan</p>
+  </div>
 
-    <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyiUb2vDoZaSyRKfUnEhypc6TpmC38fZA7a6yxhrVAnKC0XML9Y51RWJBxbn2op02mW/exec';
+  <div id="videoWrap">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="overlay"><div class="scan-frame"><span></span><div class="scan-line"></div></div></div>
+  </div>
 
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const wrap = document.getElementById('videoWrap');
-        const statusBox = document.getElementById('statusBox');
-        const btnStart = document.getElementById('btnStart');
-        const btnStop = document.getElementById('btnStop');
-        const subtitle = document.getElementById('subtitle');
-        const guide = document.getElementById('guide');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  <div id="statusBox"></div>
 
-        let stream = null, scanning = false, isProcessing = false, rafId = null;
-        let lastResult = '', lastResultTime = 0;
+  <button class="btn btn-primary" id="btnStart" onclick="startScanner()">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    Mulai Scan Kamera
+  </button>
+  <button class="btn btn-stop" id="btnStop" onclick="stopScanner()">✕ &nbsp;Hentikan Kamera</button>
 
-        function showStatus(msg, type) {
-            statusBox.textContent = msg;
-            statusBox.className = type;
-            statusBox.style.display = 'block';
+  <div id="guide">
+    <p class="guide-label">Panduan</p>
+    <p class="guide-text">Arahkan kamera ke QR Code kartu guru.<br>Kamera belakang digunakan otomatis.<br>Absensi tersimpan langsung ke Google Sheets.</p>
+  </div>
+</div>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbyiUb2vDoZaSyRKfUnEhypc6TpmC38fZA7a6yxhrVAnKC0XML9Y51RWJBxbn2op02mW/exec';
+
+  const video     = document.getElementById('video');
+  const canvas    = document.getElementById('canvas');
+  const wrap      = document.getElementById('videoWrap');
+  const statusBox = document.getElementById('statusBox');
+  const btnStart  = document.getElementById('btnStart');
+  const btnStop   = document.getElementById('btnStop');
+  const subtitle  = document.getElementById('subtitle');
+  const guide     = document.getElementById('guide');
+  const ctx       = canvas.getContext('2d', { willReadFrequently: true });
+
+  let stream = null, scanning = false, isProcessing = false, rafId = null;
+  let lastResult = '', lastResultTime = 0;
+
+  function showStatus(msg, type) {
+    statusBox.textContent = msg;
+    statusBox.className   = type;
+    statusBox.style.display = 'block';
+  }
+  function hideStatus() { statusBox.style.display = 'none'; }
+
+  async function startScanner() {
+    hideStatus();
+    showStatus('⏳ Meminta izin kamera...', 'loading');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      video.srcObject = stream;
+      await new Promise((res, rej) => { video.onloadedmetadata = res; setTimeout(rej, 8000); });
+      await video.play();
+      canvas.width  = video.videoWidth  || 640;
+      canvas.height = video.videoHeight || 480;
+      wrap.style.display = 'block';
+      btnStart.style.display = 'none';
+      btnStop.style.display  = 'flex';
+      guide.style.display    = 'none';
+      subtitle.textContent   = '🔍 Arahkan ke QR Code';
+      hideStatus();
+      scanning = true;
+      scanLoop();
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  function scanLoop() {
+    if (!scanning) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code) {
+        const now = Date.now();
+        if (code.data !== lastResult || now - lastResultTime > 8000) {
+          lastResult = code.data; lastResultTime = now;
+          onDetected(code.data);
         }
-        function hideStatus() { statusBox.style.display = 'none'; }
+      }
+    }
+    rafId = requestAnimationFrame(scanLoop);
+  }
 
-        async function startScanner() {
-            hideStatus();
-            showStatus('⏳ Meminta izin kamera...', 'loading');
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                });
-                video.srcObject = stream;
-                await new Promise((res, rej) => { video.onloadedmetadata = res; setTimeout(rej, 8000); });
-                await video.play();
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                wrap.style.display = 'block';
-                btnStart.style.display = 'none';
-                btnStop.style.display = 'flex';
-                guide.style.display = 'none';
-                subtitle.textContent = '🔍 Arahkan ke QR Code';
-                hideStatus();
-                scanning = true;
-                scanLoop();
-            } catch (err) {
-                handleError(err);
-            }
-        }
+  function onDetected(nama) {
+    if (isProcessing) return;
+    isProcessing = true;
+    showStatus('⏳ Memproses absensi...', 'loading');
 
-        function scanLoop() {
-            if (!scanning) return;
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
-                if (code) {
-                    const now = Date.now();
-                    if (code.data !== lastResult || now - lastResultTime > 8000) {
-                        lastResult = code.data; lastResultTime = now;
-                        onDetected(code.data);
-                    }
-                }
-            }
-            rafId = requestAnimationFrame(scanLoop);
-        }
+    fetch(GAS_URL + '?nama=' + encodeURIComponent(nama))
+      .then(res => res.text())
+      .then(text => {
+        const clean = text.replace(/<[^>]+>/g, '').trim();
+        const type  = clean.includes('Berhasil') ? 'success'
+                    : clean.includes('sudah absen') || clean.includes('⚠️') ? 'warning'
+                    : 'error';
+        showStatus(clean, type);
+        setTimeout(() => { isProcessing = false; hideStatus(); }, 6000);
+      })
+      .catch(() => {
+        showStatus('❌ Gagal terhubung ke server.\nPastikan koneksi internet aktif.', 'error');
+        setTimeout(() => { isProcessing = false; hideStatus(); }, 5000);
+      });
+  }
 
-        function onDetected(nama) {
-            if (isProcessing) return;
-            isProcessing = true;
-            showStatus('⏳ Memproses absensi...', 'loading');
+  function stopScanner() {
+    scanning = false;
+    if (rafId)  cancelAnimationFrame(rafId);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null; video.srcObject = null;
+    wrap.style.display = 'none';
+    btnStart.style.display = 'flex';
+    btnStop.style.display  = 'none';
+    guide.style.display    = 'block';
+    subtitle.textContent   = 'Tekan tombol untuk mulai scan';
+    hideStatus(); isProcessing = false;
+  }
 
-            fetch(GAS_URL + '?nama=' + encodeURIComponent(nama))
-                .then(res => res.text())
-                .then(text => {
-                    const clean = text.replace(/<[^>]+>/g, '').trim();
-                    const type = clean.includes('Berhasil') ? 'success'
-                        : clean.includes('sudah absen') || clean.includes('⚠️') ? 'warning'
-                            : 'error';
-                    showStatus(clean, type);
-                    setTimeout(() => { isProcessing = false; hideStatus(); }, 6000);
-                })
-                .catch(() => {
-                    showStatus('❌ Gagal terhubung ke server.\nPastikan koneksi internet aktif.', 'error');
-                    setTimeout(() => { isProcessing = false; hideStatus(); }, 5000);
-                });
-        }
-
-        function stopScanner() {
-            scanning = false;
-            if (rafId) cancelAnimationFrame(rafId);
-            if (stream) stream.getTracks().forEach(t => t.stop());
-            stream = null; video.srcObject = null;
-            wrap.style.display = 'none';
-            btnStart.style.display = 'flex';
-            btnStop.style.display = 'none';
-            guide.style.display = 'block';
-            subtitle.textContent = 'Tekan tombol untuk mulai scan';
-            hideStatus(); isProcessing = false;
-        }
-
-        function handleError(err) {
-            const msgs = {
-                NotAllowedError: '🚫 Izin kamera ditolak.\n\n1. Ketuk 🔒 di address bar\n2. Izin Situs → Kamera → Izinkan\n3. Refresh halaman ini',
-                PermissionDeniedError: '🚫 Izin kamera ditolak.\n\n1. Ketuk 🔒 di address bar\n2. Izin Situs → Kamera → Izinkan\n3. Refresh halaman ini',
-                NotFoundError: '❌ Kamera tidak ditemukan.',
-                NotReadableError: '❌ Kamera dipakai aplikasi lain.\nTutup aplikasi lain lalu coba lagi.',
-            };
-            showStatus(msgs[err.name] || '❌ Error: ' + err.message, 'error');
-        }
-    </script>
+  function handleError(err) {
+    const msgs = {
+      NotAllowedError: '🚫 Izin kamera ditolak.\n\n1. Ketuk 🔒 di address bar\n2. Izin Situs → Kamera → Izinkan\n3. Refresh halaman ini',
+      PermissionDeniedError: '🚫 Izin kamera ditolak.\n\n1. Ketuk 🔒 di address bar\n2. Izin Situs → Kamera → Izinkan\n3. Refresh halaman ini',
+      NotFoundError: '❌ Kamera tidak ditemukan.',
+      NotReadableError: '❌ Kamera dipakai aplikasi lain.\nTutup aplikasi lain lalu coba lagi.',
+    };
+    showStatus(msgs[err.name] || '❌ Error: ' + err.message, 'error');
+  }
+</script>
 </body>
-
 </html>
