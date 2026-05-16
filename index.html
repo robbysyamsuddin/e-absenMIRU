@@ -164,9 +164,18 @@
   async function startScanner() {
     hideStatus();
     showStatus('⏳ Meminta izin kamera...', 'loading');
+    
+    // Setel efek cermin (mirror) jika pakai kamera depan
+    if (cameraMode.value === 'user') {
+      video.classList.add('mirror');
+    } else {
+      video.classList.remove('mirror');
+    }
+
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        // Menggunakan nilai dari dropdown (user/environment)
+        video: { facingMode: { ideal: cameraMode.value }, width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       video.srcObject = stream;
       await new Promise((res, rej) => { video.onloadedmetadata = res; setTimeout(rej, 8000); });
