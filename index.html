@@ -48,7 +48,9 @@
       border-radius: 20px; overflow: hidden;
       background: #0f172a; margin-bottom: 16px;
     }
-    #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #video { width: 100%; height: 100%; object-fit: cover; display: block; transform: scaleX(1); }
+    /* Membalikkan tampilan jika pakai kamera depan (efek cermin) */
+    .mirror { transform: scaleX(-1) !important; } 
     #canvas { display: none; }
 
     .overlay {
@@ -85,6 +87,13 @@
     #statusBox.success { background:var(--green-light);  color:var(--green); }
     #statusBox.error   { background:var(--red-light);    color:var(--red); }
     #statusBox.warning { background:var(--amber-light);  color:var(--amber); }
+
+    .camera-select {
+      width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border);
+      font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text);
+      background: #f8fafc; margin-bottom: 12px; cursor: pointer; outline: none;
+      text-align: center; text-align-last: center; appearance: none;
+    }
 
     .btn {
       width: 100%; padding: 14px; border-radius: 16px; border: none;
@@ -123,6 +132,12 @@
 
   <div id="statusBox"></div>
 
+  <!-- Pilihan Kamera -->
+  <select id="cameraMode" class="camera-select">
+    <option value="environment">📷 Kamera Belakang</option>
+    <option value="user">🤳 Kamera Depan</option>
+  </select>
+
   <button class="btn btn-primary" id="btnStart" onclick="startScanner()">
     <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
@@ -134,25 +149,34 @@
 
   <div id="guide">
     <p class="guide-label">Panduan</p>
-    <p class="guide-text">Arahkan kamera ke QR Code kartu guru.<br>Kamera belakang digunakan otomatis.<br>Absensi tersimpan langsung ke Google Sheets.</p>
+    <p class="guide-text">Pilih kamera lalu tekan tombol scan.<br>Arahkan kamera ke QR Code.<br>Absensi tersimpan langsung ke Google Sheets.</p>
   </div>
 </div>
 
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbx97AVNlTJVjiNoXnkdDhyD6YGFhbPIxsc-Gt0LXFpZLmOYhqj95J5dOe0wOzeCmH0H/exec';
 
-  const video     = document.getElementById('video');
-  const canvas    = document.getElementById('canvas');
-  const wrap      = document.getElementById('videoWrap');
-  const statusBox = document.getElementById('statusBox');
-  const btnStart  = document.getElementById('btnStart');
-  const btnStop   = document.getElementById('btnStop');
-  const subtitle  = document.getElementById('subtitle');
-  const guide     = document.getElementById('guide');
-  const ctx       = canvas.getContext('2d', { willReadFrequently: true });
+  const video      = document.getElementById('video');
+  const canvas     = document.getElementById('canvas');
+  const wrap       = document.getElementById('videoWrap');
+  const statusBox  = document.getElementById('statusBox');
+  const btnStart   = document.getElementById('btnStart');
+  const btnStop    = document.getElementById('btnStop');
+  const subtitle   = document.getElementById('subtitle');
+  const guide      = document.getElementById('guide');
+  const cameraMode = document.getElementById('cameraMode');
+  const ctx        = canvas.getContext('2d', { willReadFrequently: true });
 
   let stream = null, scanning = false, isProcessing = false, rafId = null;
   let lastResult = '', lastResultTime = 0;
+
+  // Restart kamera otomatis jika dropdown diubah saat sedang scanning
+  cameraMode.addEventListener('change', () => {
+    if (scanning) {
+      stopScanner();
+      startScanner();
+    }
+  });
 
   function showStatus(msg, type) {
     statusBox.textContent = msg;
